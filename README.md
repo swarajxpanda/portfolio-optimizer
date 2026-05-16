@@ -1,43 +1,32 @@
 # portfolio-optimizer
 
-A full-stack portfolio analytics and optimization platform built for analyzing live brokerage portfolios, portfolio risk, and allocation insights using Zerodha’s Kite Connect API.
+## Intro
+portfolio-optimizer is a full-stack portfolio analytics system for analyzing live brokerage holdings, measuring concentration risk, and generating rule-based exit and fragility insights from Zerodha Kite Connect data.
 
-## Features
+It uses the finance formulas and methods we actually built into the project:
 
-- **Portfolio Overview**: Monitor holdings, invested capital, current portfolio value, and overall P&L in real time.
-- **Diversification Analytics**: Analyze portfolio diversification, asset concentration, and allocation exposure across holdings.
-- **Fragility Engine**: Identify portfolio concentration risks and exposure dependencies.
-- **Exit Engine**: Generate rule-based exit insights and position monitoring workflows.
-- **Real-Time Brokerage Integration**: Integrated with Zerodha’s Kite Connect API for live portfolio and holdings data.
-- **Interactive Dashboard**: Responsive analytics dashboard built with React, Vite, and Tailwind CSS.
+- `portfolio value = last_price * quantity`
+- `invested capital = average_price * quantity`
+- `P&L = current value - invested capital`
+- `return % = P&L / invested capital * 100`
+- `portfolio weight % = holding value / total portfolio value * 100`
+- `Herfindahl Index (HHI) = sum(weight_i^2)` for concentration and diversification analysis
+- `volatility-threshold exit logic` for rule-based position monitoring
+- `Ledoit-Wolf shrinkage covariance` for more stable correlation and fragility analysis
+
+This project helps turn raw brokerage data into a structured decision-making workflow for portfolio review, concentration control, diversification analysis, and exit planning.
 
 ## Tech Stack
 
-### Frontend
-- React
-- Vite
-- Tailwind CSS
+- Backend: FastAPI, Python, Pandas, NumPy, SciPy, scikit-learn
+- Frontend: React, Vite, Axios
+- Broker integration: Zerodha Kite Connect API
 
-### Backend
-- FastAPI
-- Python
-- Pandas
-- NumPy
-- SQLite
-
-### APIs & Integrations
-- Zerodha Kite Connect API
-
-## Project Structure
-
-- `backend/` — FastAPI backend handling analytics, portfolio processing, and API integrations.
-- `frontend/` — React frontend for portfolio visualization and dashboard analytics.
-
-## Setup and Installation
+## How to Run
 
 ### Backend
 
-1. Navigate to the backend directory:
+1. Go to the backend directory:
    ```bash
    cd backend
    ```
@@ -45,11 +34,6 @@ A full-stack portfolio analytics and optimization platform built for analyzing l
 2. Create and activate a virtual environment:
    ```bash
    python -m venv .venv
-   source .venv/bin/activate
-   ```
-
-   On Windows:
-   ```bash
    .venv\Scripts\activate
    ```
 
@@ -65,14 +49,14 @@ A full-stack portfolio analytics and optimization platform built for analyzing l
    REDIRECT_URL=your_redirect_url
    ```
 
-5. Run the backend server:
+5. Start the backend server:
    ```bash
    uvicorn main:app --reload
    ```
 
 ### Frontend
 
-1. Navigate to the frontend directory:
+1. Go to the frontend directory:
    ```bash
    cd frontend
    ```
@@ -82,15 +66,7 @@ A full-stack portfolio analytics and optimization platform built for analyzing l
    npm install
    ```
 
-3. Run the development server:
+3. Start the frontend:
    ```bash
    npm run dev
    ```
-
-## Future Improvements
-
-- Strategy backtesting modules
-- Risk-adjusted performance metrics
-- Automated alert systems
-- Portfolio optimization models
-- Machine learning based analytics
