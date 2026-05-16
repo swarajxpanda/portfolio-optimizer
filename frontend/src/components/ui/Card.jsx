@@ -1,7 +1,15 @@
-export default function Card({ children }) {
+import { cn } from "../../utils/classNames";
+
+export default function Card({ children, className = "", interactive = false }) {
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl px-5 py-4">
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--surface)]",
+        interactive && "transition-colors duration-150 hover:bg-[var(--surface-1)]",
+        className,
+      )}
+    >
       {children}
-    </div>
+    </section>
   );
 }
