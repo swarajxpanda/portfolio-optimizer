@@ -1,4 +1,21 @@
+def _empty_overview():
+    return {
+        "health": {
+            "total_value": 0,
+            "total_pnl": 0,
+            "return_pct": 0,
+            "capital_at_risk": 0,
+        },
+        "allocation": [],
+        "concentration": [],
+    }
+
+
 def compute_overview(df, config):
+    if df is None or df.empty:
+        return _empty_overview()
+
+    df = df.copy()
     df["value"] = df["last_price"] * df["quantity"]
     df["invested"] = df["average_price"] * df["quantity"]
     df["pnl"] = df["value"] - df["invested"]
@@ -6,109 +23,103 @@ def compute_overview(df, config):
     total_value = df["value"].sum()
     total_invested = df["invested"].sum()
     total_pnl = df["pnl"].sum()
-
     capital_at_risk = df[df["pnl"] < 0]["value"].sum()
 
-    # ---------- ALLOCATION ----------
-    def classify(sym):
-        for g, arr in config["groups"].items():
-            if sym in arr:
-                return g
+    def classify(symbol):
+        for group, symbols in config["groups"].items():
+            if symbol in symbols:
+                return group
         return "Unassigned"
 
     df["group"] = df["tradingsymbol"].apply(classify)
-
-    grouped = df.groupby("group").agg({
-        "value": "sum",
-        "invested": "sum",
-        "pnl": "sum"
-    }).reset_index()
+    grouped = df.groupby("group").agg({"value": "sum", "invested": "sum", "pnl": "sum"}).reset_index()
 
     allocation = []
+    for _, row in grouped.iterrows():
+        group = row["group"]
+        value = row["value"]
+        invested = row["invested"]
+        pnl = row["pnl"]
+        allocation_pct = (value / total_value) * 100 if total_value else 0
+        pnl_pct = (pnl / invested) * 100 if invested else 0
 
-    for _, r in grouped.iterrows():
-        g = r["group"]
-        val = r["value"]
-        inv = r["invested"]
-        pnl = r["pnl"]
-
-        pct = (val / total_value) * 100
-        pnl_pct = (pnl / inv) * 100 if inv else 0
-
-        t = config["targets"].get(g)
-        if t:
-            tmin, tmax = t
-            if pct > tmax:
-                amt = val - (tmax / 100) * total_value
-                action = {"type": "TRIM", "amount": int(amt)}
-            elif pct < tmin:
-                amt = (tmin / 100) * total_value - val
-                action = {"type": "ADD", "amount": int(amt)}
+        target = config["targets"].get(group)
+        if target:
+            target_min, target_max = target
+            if allocation_pct > target_max:
+                amount = value - (target_max / 100) * total_value
+                action = {"type": "TRIM", "amount": int(amount)}
+            elif allocation_pct < target_min:
+                amount = (target_min / 100) * total_value - value
+                action = {"type": "ADD", "amount": int(amount)}
             else:
                 action = {"type": "HOLD", "amount": 0}
-            target_str = f"{tmin}-{tmax}%"
+            target_label = f"{target_min}-{target_max}%"
         else:
             action = {"type": "HOLD", "amount": 0}
-            target_str = "—"
+            target_label = "-"
 
-        allocation.append({
-            "group": g,
-            "value": float(val),
-            "allocation_pct": round(pct, 1),
-            "pnl": float(pnl),
-            "pnl_pct": round(pnl_pct, 1),
-            "target": target_str,
-            "action": action
-        })
+        allocation.append(
+            {
+                "group": group,
+                "value": float(value),
+                "allocation_pct": round(allocation_pct, 1),
+                "pnl": float(pnl),
+                "pnl_pct": round(pnl_pct, 1),
+                "target": target_label,
+                "action": action,
+            }
+        )
 
-    # ---------- CONCENTRATION ----------
     df_sorted = df.sort_values("value", ascending=False)
+    concentration = []
 
-    top5 = df_sorted.head(5)
-    top5_val = top5["value"].sum()
-    top5_pct = (top5_val / total_value) * 100
+    if not df_sorted.empty:
+        top5 = df_sorted.head(5)
+        top5_value = top5["value"].sum()
+        top5_pct = (top5_value / total_value) * 100 if total_value else 0
+        top5_limit = config["concentration"]["top5"]
+        top5_action = (
+            {"type": "TRIM", "amount": int(top5_value - (top5_limit / 100) * total_value)}
+            if top5_pct > top5_limit
+            else {"type": "HOLD", "amount": 0}
+        )
 
-    top5_limit = config["concentration"]["top5"]
-    top5_action = (
-        {"type": "TRIM", "amount": int(top5_val - (top5_limit/100)*total_value)}
-        if top5_pct > top5_limit else {"type": "HOLD", "amount": 0}
-    )
+        largest = df_sorted.iloc[0]
+        largest_pct = (largest["value"] / total_value) * 100 if total_value else 0
+        single_limit = config["concentration"]["single"]
+        largest_action = (
+            {"type": "TRIM", "amount": int(largest["value"] - (single_limit / 100) * total_value)}
+            if largest_pct > single_limit
+            else {"type": "HOLD", "amount": 0}
+        )
 
-    largest = df_sorted.iloc[0]
-    largest_pct = (largest["value"] / total_value) * 100
-    single_limit = config["concentration"]["single"]
-
-    largest_action = (
-        {"type": "TRIM", "amount": int(largest["value"] - (single_limit/100)*total_value)}
-        if largest_pct > single_limit else {"type": "HOLD", "amount": 0}
-    )
-
-    concentration = [
-        {
-            "metric": "Top 5 Holdings",
-            "value": float(top5_val),
-            "value_pct": round(top5_pct, 1),
-            "pnl": float(top5["pnl"].sum()),
-            "limit": f"< {top5_limit}%",
-            "action": top5_action
-        },
-        {
-            "metric": f"Largest Holding - {largest['tradingsymbol']}",
-            "value": float(largest["value"]),
-            "value_pct": round(largest_pct, 1),
-            "pnl": float(largest["pnl"]),
-            "limit": f"≤ {single_limit}%",
-            "action": largest_action
-        }
-    ]
+        concentration = [
+            {
+                "metric": "Top 5 Holdings",
+                "value": float(top5_value),
+                "value_pct": round(top5_pct, 1),
+                "pnl": float(top5["pnl"].sum()),
+                "limit": f"< {top5_limit}%",
+                "action": top5_action,
+            },
+            {
+                "metric": f"Largest Holding - {largest['tradingsymbol']}",
+                "value": float(largest["value"]),
+                "value_pct": round(largest_pct, 1),
+                "pnl": float(largest["pnl"]),
+                "limit": f"<= {single_limit}%",
+                "action": largest_action,
+            },
+        ]
 
     return {
         "health": {
             "total_value": float(total_value),
             "total_pnl": float(total_pnl),
             "return_pct": float((total_pnl / total_invested) * 100) if total_invested else 0,
-            "capital_at_risk": float(capital_at_risk)
+            "capital_at_risk": float(capital_at_risk),
         },
         "allocation": allocation,
-        "concentration": concentration
+        "concentration": concentration,
     }

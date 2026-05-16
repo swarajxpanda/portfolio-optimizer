@@ -1,7 +1,4 @@
-"""
-Exit Signals Engine — Pure computation layer.
-Scores each holding 0–100 across 5 KPIs and assigns an action.
-"""
+﻿"""Pure computation layer for rule-based exit signals."""
 
 import numpy as np
 import pandas as pd
@@ -10,7 +7,7 @@ from .settings import get_settings
 
 # KPI 1: Loss Severity
 def _score_loss_severity(return_pct: float, scores: list) -> int:
-    """Capital protection — penalises unrealised losses."""
+    """Capital protection via unrealized loss severity."""
     if return_pct >= 0:
         return 0
     if return_pct >= -5:
@@ -91,8 +88,8 @@ def compute_exit_signals(
     Parameters
     ----------
     holdings_df : DataFrame with columns from Kite holdings
-        (tradingsymbol, last_price, average_price, quantity, instrument_token, …)
-    history : {instrument_token: DataFrame(date, close, …)}
+        (tradingsymbol, last_price, average_price, quantity, instrument_token, ...)
+    history : {instrument_token: DataFrame(date, close, ...)}
 
     Returns
     -------
@@ -216,3 +213,6 @@ def compute_exit_signals(
     }
 
     return {"summary": summary, "signals": signals}
+
+
+
