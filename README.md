@@ -18,7 +18,7 @@ This project helps turn raw brokerage data into a structured decision-making wor
 
 ## Tech Stack
 
-- Backend: FastAPI, Python, Pandas, NumPy, SciPy, scikit-learn
+- Backend: FastAPI, Python (python 3.12 recommended ), Pandas, NumPy, SciPy, scikit-learn
 - Frontend: React, Vite, Axios
 - Broker integration: Zerodha Kite Connect API
 
@@ -32,9 +32,16 @@ This project helps turn raw brokerage data into a structured decision-making wor
    ```
 
 2. Create and activate a virtual environment:
+
+   ##### Windows
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
+   ```
+   ##### Linux
+   ```bash
+   python3.12 -m venv .venv
+   source .venv/bin/activate
    ```
 
 3. Install dependencies:
